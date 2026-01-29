@@ -1,2 +1,2 @@
 # hybridGcode
-automation for converting slicer gcode for hybrid manufacturing
+automation converting slicer gcode for hybrid manufacturing
