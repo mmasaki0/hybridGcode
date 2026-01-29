@@ -7,8 +7,10 @@ class ANSI:
 # load gcode
 while True:
     try:
-        filename = input("Enter filename: ").strip()
-        file = open(filename, "r")
+        filename = input("Enter .gcode filename: ").strip()
+        # validate file directory and readability
+        with open(filename, "r") as infile:
+            infile.readline()
         print(ANSI.OKGREEN + "   File " + filename + " found." + ANSI.ENDC)
         break
     except FileNotFoundError:
@@ -18,6 +20,11 @@ while True:
 processPrinting = input("Enter printing process name: ")
 processMachining = input("Enter machining process name: ")
 
+# from my understanding, the z axis needs to be flipped to machine in the right direction (feed direction). this should flip the part upside down and i'm not completely sure how the nozzle doesnt collide with the bed.
 
+# with open(filename, 'r') as infile, open(filename + "-hybrid.gcode", 'w'):
+#     firstNonComment = None
+#     for line in file:
+#         if firstNonComment == None
+            
 
-file.close()
