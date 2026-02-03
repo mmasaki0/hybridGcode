@@ -20,11 +20,36 @@ while True:
 processPrinting = input("Enter printing process name: ")
 processMachining = input("Enter machining process name: ")
 
-# from my understanding, the z axis needs to be flipped to machine in the right direction (feed direction). this should flip the part upside down and i'm not completely sure how the nozzle doesnt collide with the bed.
+# operation functions
 
-# with open(filename, 'r') as infile, open(filename + "-hybrid.gcode", 'w'):
-#     firstNonComment = None
-#     for line in file:
-#         if firstNonComment == None
-            
+class layerProcess:
+    def __init__(self, layer, process):
+        self.layer = layer
+        self.process = process
+
+
+def cleanLine(line):
+    # removes leading and trailing whitespace
+    return line.strip()
+
+# file reading
+
+# first pass reads and identifies layers and processes
+with open(filename, 'r') as infile:
+    print('')
+
+with open(filename, 'r') as infile:
+    previousLine = None
+    for line in infile:
+        lineProcessing = line
+        
+        lineProcessing = cleanLine(lineProcessing)
+        
+        # check if first comment block ends
+
+        # 
+
+        # save current line to be readible in next line
+        previousLine = lineProcessing
+
 
