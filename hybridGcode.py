@@ -22,7 +22,7 @@ processMachining = input("Enter machining process name: ")
 
 # operation functions
 
-class layerProcess:
+class process:
     def __init__(self, layer, process):
         self.layer = layer
         self.process = process
@@ -34,22 +34,47 @@ def cleanLine(line):
 
 # file reading
 
-# first pass reads and identifies layers and processes
-with open(filename, 'r') as infile:
-    print('')
 
-with open(filename, 'r') as infile:
-    previousLine = None
-    for line in infile:
-        lineProcessing = line
+
+# first pass for indexing
+
+linesSkip = []
+
+class writeSkip:
+    def __init__(self, reason, lineStart, lineEnd=None):
+        self.reason = reason
+        self.lineStart = lineStart
+        self.lineEnd = lineEnd
+
+with open(filename, 'r') as inFile:
+    currentProcess = 'Setup'
+    for lineNum, line in enumerate(inFile):
         
-        lineProcessing = cleanLine(lineProcessing)
-        
-        # check if first comment block ends
+        # check if first line is a comment
+        if(lineNum == 0 and line[0] == ';'):
+            linesSkip.append(writeSkip("firstComment", 0))
 
-        # 
+        keywords = line.strip().split(' ')
 
-        # save current line to be readible in next line
-        previousLine = lineProcessing
+        if(keywords[0] == ';' and keywords[1] == 'process'):
+            print(keywords, lineNum)
 
+        if(keywords[0] == ';' and keywords[1] == 'layer'):
+            print(keywords, lineNum)
 
+# second pass for modifying
+
+with open(filename, 'r') as inFile, open(filename.split('.')[0]+"_temp."+filename.split('.')[1], 'w') as outTempFile:
+    for lineNum, line in enumerate(inFile):
+        # cleans line
+        workingLine = line.strip()
+
+        # replacement operations
+        workingLine = workingLine.replace(" E", " A-").replace(" Z", " Z-").replace("--", "-")
+
+        # write to file
+        outTempFile.write(workingLine + "\n")
+
+# third pass for removing lines
+
+print(linesSkip[0].lineEnd)
