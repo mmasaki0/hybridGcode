@@ -38,43 +38,47 @@ def cleanLine(line):
 
 # first pass for indexing
 
-linesSkip = []
-
-class writeSkip:
-    def __init__(self, reason, lineStart, lineEnd=None):
-        self.reason = reason
-        self.lineStart = lineStart
-        self.lineEnd = lineEnd
-
 with open(filename, 'r') as inFile:
-    currentProcess = 'Setup'
-    for lineNum, line in enumerate(inFile):
+    lines = [line.strip() for line in inFile]
+    print(lines)
+
+# linesSkip = []
+
+# class writeSkip:
+#     def __init__(self, reason, lineStart, lineEnd=None):
+#         self.reason = reason
+#         self.lineStart = lineStart
+#         self.lineEnd = lineEnd
+
+# with open(filename, 'r') as inFile:
+#     currentProcess = 'Setup'
+#     for lineNum, line in enumerate(inFile):
         
-        # check if first line is a comment
-        if(lineNum == 0 and line[0] == ';'):
-            linesSkip.append(writeSkip("firstComment", 0))
+#         # check if first line is a comment
+#         if(lineNum == 0 and line[0] == ';'):
+#             linesSkip.append(writeSkip("firstComment", 0))
 
-        keywords = line.strip().split(' ')
+#         keywords = line.strip().split(' ')
 
-        if(keywords[0] == ';' and keywords[1] == 'process'):
-            print(keywords, lineNum)
+#         if(keywords[0] == ';' and keywords[1] == 'process'):
+#             print(keywords, lineNum)
 
-        if(keywords[0] == ';' and keywords[1] == 'layer'):
-            print(keywords, lineNum)
+#         if(keywords[0] == ';' and keywords[1] == 'layer'):
+#             print(keywords, lineNum)
 
-# second pass for modifying
+# # second pass for modifying
 
-with open(filename, 'r') as inFile, open(filename.split('.')[0]+"_temp."+filename.split('.')[1], 'w') as outTempFile:
-    for lineNum, line in enumerate(inFile):
-        # cleans line
-        workingLine = line.strip()
+# with open(filename, 'r') as inFile, open(filename.split('.')[0]+"_temp."+filename.split('.')[1], 'w') as outTempFile:
+#     for lineNum, line in enumerate(inFile):
+#         # cleans line
+#         workingLine = line.strip()
 
-        # replacement operations
-        workingLine = workingLine.replace(" E", " A-").replace(" Z", " Z-").replace("--", "-")
+#         # replacement operations
+#         workingLine = workingLine.replace(" E", " A-").replace(" Z", " Z-").replace("--", "-")
 
-        # write to file
-        outTempFile.write(workingLine + "\n")
+#         # write to file
+#         outTempFile.write(workingLine + "\n")
 
-# third pass for removing lines
+# # third pass for removing lines
 
-print(linesSkip[0].lineEnd)
+# print(linesSkip[0].lineEnd)
