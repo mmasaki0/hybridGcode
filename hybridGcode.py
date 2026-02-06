@@ -1,3 +1,6 @@
+import math
+
+# console output text colors
 class ANSI:
     OKGREEN = '\033[92m'
     FAIL = '\033[91m'
@@ -20,65 +23,93 @@ while True:
 processPrinting = input("Enter printing process name: ")
 processMachining = input("Enter machining process name: ")
 
-# operation functions
-
+# process class 
 class process:
-    def __init__(self, layer, process):
-        self.layer = layer
+    def __init__(self, process, lineStart, lineEnd=None):
         self.process = process
-
-
-def cleanLine(line):
-    # removes leading and trailing whitespace
-    return line.strip()
+        self.lineStart = lineStart
 
 # file reading
+processes = []
+writeSkip = []
 
-
-
-# first pass for indexing
+firstComments = []
 
 with open(filename, 'r') as inFile:
     lines = [line.strip() for line in inFile]
-    print(lines)
 
-# linesSkip = []
+# first pass indexing
+for lineNum, line in enumerate(lines):
+    keywords = line.strip().split(' ')
 
-# class writeSkip:
-#     def __init__(self, reason, lineStart, lineEnd=None):
-#         self.reason = reason
-#         self.lineStart = lineStart
-#         self.lineEnd = lineEnd
+    # add first comments to writeSkip
+    if keywords[0] == ';':
+        if lineNum == 0 or len(firstComments) != 0 and lineNum == firstComments[-1] + 1:
+            firstComments.append(lineNum)
+    
+    # indexes processes
+    if keywords[0] == ';' and keywords[1] == "process":
+        processes.append(process(keywords[2], lineNum))
+    elif keywords[0] == ';' and keywords[1] == "layer" and keywords[2] == "end":
+        processes.append(process(keywords[2], lineNum))
 
-# with open(filename, 'r') as inFile:
-#     currentProcess = 'Setup'
-#     for lineNum, line in enumerate(inFile):
+
+writeSkip.extend(firstComments)
+for process in processes:
+    print(process.lineStart)
+
+for lineNum, line in enumerate(lines):
+    if line[0] != ';':
+        workingLine = line
+
+        # replaces E motor with A motor reversed (extruder)
+        # workingLine = workingLine.replace(" E", " A-")
+        # flips coordinate system upside down (machines counterclockwise by right hand rule)
+        workingLine = workingLine.replace(" Z", " Z-").replace("--", "-")
+
+        lines[lineNum] = workingLine
+
+# reverse machining process lines
+for processNum in range(0, len(processes) - 1):
+
+    currentProcess = processes[processNum]
+    nextProcess = processes[processNum + 1]
+
+    linesReversed = []
+
+    # check for machining process
+    if currentProcess.process == processMachining:
+        lineStartOffset = 0
+        lineEndOffset = -1
+        # iterates through process lines until first G line found
+        for lineNum in range(0, nextProcess.lineStart - currentProcess.lineStart):
+            if lines[currentProcess.lineStart + lineNum][0] == 'G':
+                lineStartOffset = lineNum
+                break
+
+        # print(nextProcess.lineStart + lineEndOffset - currentProcess.lineStart - lineStartOffset)
+        print( math.ceil((nextProcess.lineStart + lineEndOffset - currentProcess.lineStart - lineStartOffset) / 2) )
+        for lineNum in range(0, math.ceil((nextProcess.lineStart + lineEndOffset - currentProcess.lineStart - lineStartOffset) / 2) ):
+            print(lineNum)
+            temp = lines[currentProcess.lineStart + lineStartOffset + lineNum]
+            lines[currentProcess.lineStart + lineStartOffset + lineNum] = lines[nextProcess.lineStart + lineEndOffset - lineNum]
+            lines[nextProcess.lineStart + lineEndOffset - lineNum] = temp
+
+        # print(lineStartOffset)
+        # reverses all process lines from first G line to next process
+        # print(processes[processNum].lineStart + lineStartOffset, processes[processNum + 1].lineStart, "starting")
+        # print(math.ceil((processes[processNum + 1].lineStart - (processes[processNum].lineStart + lineStartOffset)) / 2))
+        # for lineNum in range(processes[processNum].lineStart + lineStartOffset, processes[processNum].lineStart + lineStartOffset + lineEndOffset + math.ceil((processes[processNum + 1].lineStart + lineEndOffset - (processes[processNum].lineStart + lineStartOffset)) / 2)):
+           
+        #     temp = lines[lineNum]
+        #     print(lineNum, processes[processNum + 1].lineStart - lineNum + lineStartOffset)
+        #     lines[lineNum] = lines[processes[processNum + 1].lineStart - lineNum + lineStartOffset + lineEndOffset]
+        #     lines[processes[processNum + 1].lineStart + lineEndOffset] = temp
+
+# write file
+with open(filename.split('.')[0]+"_temp."+filename.split('.')[1], 'w') as outTempFile:
+    for lineNum, line in enumerate(lines):
+        if lineNum not in writeSkip:
+            outTempFile.write(line + "\n")
         
-#         # check if first line is a comment
-#         if(lineNum == 0 and line[0] == ';'):
-#             linesSkip.append(writeSkip("firstComment", 0))
-
-#         keywords = line.strip().split(' ')
-
-#         if(keywords[0] == ';' and keywords[1] == 'process'):
-#             print(keywords, lineNum)
-
-#         if(keywords[0] == ';' and keywords[1] == 'layer'):
-#             print(keywords, lineNum)
-
-# # second pass for modifying
-
-# with open(filename, 'r') as inFile, open(filename.split('.')[0]+"_temp."+filename.split('.')[1], 'w') as outTempFile:
-#     for lineNum, line in enumerate(inFile):
-#         # cleans line
-#         workingLine = line.strip()
-
-#         # replacement operations
-#         workingLine = workingLine.replace(" E", " A-").replace(" Z", " Z-").replace("--", "-")
-
-#         # write to file
-#         outTempFile.write(workingLine + "\n")
-
-# # third pass for removing lines
-
-# print(linesSkip[0].lineEnd)
+    outTempFile.write("; G-Code Hybridized by Masaki Maruo\n")
