@@ -75,8 +75,6 @@ for processNum in range(0, len(processes) - 1):
     currentProcess = processes[processNum]
     nextProcess = processes[processNum + 1]
 
-    linesReversed = []
-
     # check for machining process
     if currentProcess.process == processMachining:
         lineStartOffset = 0
@@ -90,21 +88,9 @@ for processNum in range(0, len(processes) - 1):
         # print(nextProcess.lineStart + lineEndOffset - currentProcess.lineStart - lineStartOffset)
         print( math.ceil((nextProcess.lineStart + lineEndOffset - currentProcess.lineStart - lineStartOffset) / 2) )
         for lineNum in range(0, math.ceil((nextProcess.lineStart + lineEndOffset - currentProcess.lineStart - lineStartOffset) / 2) ):
-            print(lineNum)
             temp = lines[currentProcess.lineStart + lineStartOffset + lineNum]
             lines[currentProcess.lineStart + lineStartOffset + lineNum] = lines[nextProcess.lineStart + lineEndOffset - lineNum]
             lines[nextProcess.lineStart + lineEndOffset - lineNum] = temp
-
-        # print(lineStartOffset)
-        # reverses all process lines from first G line to next process
-        # print(processes[processNum].lineStart + lineStartOffset, processes[processNum + 1].lineStart, "starting")
-        # print(math.ceil((processes[processNum + 1].lineStart - (processes[processNum].lineStart + lineStartOffset)) / 2))
-        # for lineNum in range(processes[processNum].lineStart + lineStartOffset, processes[processNum].lineStart + lineStartOffset + lineEndOffset + math.ceil((processes[processNum + 1].lineStart + lineEndOffset - (processes[processNum].lineStart + lineStartOffset)) / 2)):
-           
-        #     temp = lines[lineNum]
-        #     print(lineNum, processes[processNum + 1].lineStart - lineNum + lineStartOffset)
-        #     lines[lineNum] = lines[processes[processNum + 1].lineStart - lineNum + lineStartOffset + lineEndOffset]
-        #     lines[processes[processNum + 1].lineStart + lineEndOffset] = temp
 
 # write file
 with open(filename.split('.')[0]+"_temp."+filename.split('.')[1], 'w') as outTempFile:
