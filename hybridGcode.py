@@ -1,4 +1,6 @@
 import math
+import re
+import datetime
 
 # console output text colors
 class ANSI:
@@ -55,8 +57,11 @@ for lineNum, line in enumerate(lines):
 
 writeSkip.extend(firstComments)
 
+currentProcess = ""
+
 for lineNum, line in enumerate(lines):
     keywords = line.split(' ')
+    
 
     if keywords[0] != ';':
         workingLine = line
@@ -69,6 +74,13 @@ for lineNum, line in enumerate(lines):
         lines[lineNum] = workingLine
     
     # iterate through processes to see which process its in and lower feedrate if machining
+    for processNum in range(0, len(processes)):
+        if lineNum == processes[processNum].lineStart:
+            currentProcess = processes[processNum].process
+            print(currentProcess)
+    if currentProcess == processMachining and keywords[0] != ';':
+        matches = [keyword for keyword in keywords if re.match("F", keyword)]
+        print(matches, lineNum)
 
 # reverse machining process lines
 for processNum in range(0, len(processes) - 1):
@@ -98,6 +110,7 @@ with open(filename.split('.')[0]+"_hybrid."+filename.split('.')[1], 'w') as outT
         if lineNum not in writeSkip:
             outTempFile.write(line + "\n")
         
-    outTempFile.write("; G-Code Hybridized by Masaki Maruo\n")
+    timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    outTempFile.write("; G-Code Hybridized by Masaki Maruo\n; " + timestamp)
 
 print(ANSI.OKGREEN + "   File " + filename.split('.')[0]+"_hybrid."+filename.split('.')[1] + " written." + ANSI.ENDC)
