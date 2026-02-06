@@ -40,7 +40,7 @@ with open(filename, 'r') as inFile:
 
 # first pass indexing
 for lineNum, line in enumerate(lines):
-    keywords = line.strip().split(' ')
+    keywords = line.split(' ')
 
     # add first comments to writeSkip
     if keywords[0] == ';':
@@ -53,13 +53,12 @@ for lineNum, line in enumerate(lines):
     elif keywords[0] == ';' and keywords[1] == "layer" and keywords[2] == "end":
         processes.append(process(keywords[2], lineNum))
 
-
 writeSkip.extend(firstComments)
-for process in processes:
-    print(process.lineStart)
 
 for lineNum, line in enumerate(lines):
-    if line[0] != ';':
+    keywords = line.split(' ')
+
+    if keywords[0] != ';':
         workingLine = line
 
         # replaces E motor with A motor reversed (extruder)
@@ -68,6 +67,8 @@ for lineNum, line in enumerate(lines):
         workingLine = workingLine.replace(" Z", " Z-").replace("--", "-")
 
         lines[lineNum] = workingLine
+    
+    # iterate through processes to see which process its in and lower feedrate if machining
 
 # reverse machining process lines
 for processNum in range(0, len(processes) - 1):
@@ -86,16 +87,17 @@ for processNum in range(0, len(processes) - 1):
                 break
 
         # print(nextProcess.lineStart + lineEndOffset - currentProcess.lineStart - lineStartOffset)
-        print( math.ceil((nextProcess.lineStart + lineEndOffset - currentProcess.lineStart - lineStartOffset) / 2) )
         for lineNum in range(0, math.ceil((nextProcess.lineStart + lineEndOffset - currentProcess.lineStart - lineStartOffset) / 2) ):
             temp = lines[currentProcess.lineStart + lineStartOffset + lineNum]
             lines[currentProcess.lineStart + lineStartOffset + lineNum] = lines[nextProcess.lineStart + lineEndOffset - lineNum]
             lines[nextProcess.lineStart + lineEndOffset - lineNum] = temp
 
 # write file
-with open(filename.split('.')[0]+"_temp."+filename.split('.')[1], 'w') as outTempFile:
+with open(filename.split('.')[0]+"_hybrid."+filename.split('.')[1], 'w') as outTempFile:
     for lineNum, line in enumerate(lines):
         if lineNum not in writeSkip:
             outTempFile.write(line + "\n")
         
     outTempFile.write("; G-Code Hybridized by Masaki Maruo\n")
+
+print(ANSI.OKGREEN + "   File " + filename.split('.')[0]+"_hybrid."+filename.split('.')[1] + " written." + ANSI.ENDC)
