@@ -34,6 +34,7 @@ class process:
 # file reading
 processes = []
 writeSkip = []
+writeInsert = []
 machiningFeedRate = "F288"
 
 firstComments = []
@@ -102,7 +103,7 @@ for processNum in range(0, len(processes) - 1):
                 lineStartOffset = lineNum
                 break
 
-        # print(nextProcess.lineStart + lineEndOffset - currentProcess.lineStart - lineStartOffset)
+        # reverses lines using found offset
         for lineNum in range(0, math.ceil((nextProcess.lineStart + lineEndOffset - currentProcess.lineStart - lineStartOffset) / 2) ):
             temp = lines[currentProcess.lineStart + lineStartOffset + lineNum]
             lines[currentProcess.lineStart + lineStartOffset + lineNum] = lines[nextProcess.lineStart + lineEndOffset - lineNum]
