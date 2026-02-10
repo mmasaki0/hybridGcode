@@ -73,6 +73,7 @@ for lineNum, line in enumerate(lines):
         workingLine = workingLine.replace(" Z", " Z-").replace("--", "-")
 
         lines[lineNum] = workingLine
+        keywords = lines[lineNum].split(' ')
     
     # iterate through processes to see which process its in and lower feedrate if machining
     for processNum in range(0, len(processes)):
@@ -83,9 +84,7 @@ for lineNum, line in enumerate(lines):
         matches = [keyword for keyword in keywords if re.match("F", keyword)]
         if len(matches) == 1:
             keywords[keywords.index(matches[0])] = machiningFeedRate
-            print(lines[lineNum], " ".join(keywords))
-        #     keywords[keywords.index(matches[0])] = machiningFeedRate
-        #     lines[lineNum] = " ".join(keywords)
+            lines[lineNum] = " ".join(keywords)
 
 # reverse machining process lines
 for processNum in range(0, len(processes) - 1):
