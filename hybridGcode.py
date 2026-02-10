@@ -34,6 +34,7 @@ class process:
 # file reading
 processes = []
 writeSkip = []
+machiningFeedRate = "F288"
 
 firstComments = []
 
@@ -80,29 +81,31 @@ for lineNum, line in enumerate(lines):
             print(currentProcess)
     if currentProcess == processMachining and keywords[0] != ';':
         matches = [keyword for keyword in keywords if re.match("F", keyword)]
-        print(matches, lineNum)
+        if len(matches) == 1:
+            keywords[keywords.index(matches[0])] = machiningFeedRate
+            lines[lineNum] = " ".join(keywords)
 
-# reverse machining process lines
-for processNum in range(0, len(processes) - 1):
+# # reverse machining process lines
+# for processNum in range(0, len(processes) - 1):
 
-    currentProcess = processes[processNum]
-    nextProcess = processes[processNum + 1]
+#     currentProcess = processes[processNum]
+#     nextProcess = processes[processNum + 1]
 
-    # check for machining process
-    if currentProcess.process == processMachining:
-        lineStartOffset = 0
-        lineEndOffset = -1
-        # iterates through process lines until first G line found
-        for lineNum in range(0, nextProcess.lineStart - currentProcess.lineStart):
-            if lines[currentProcess.lineStart + lineNum][0] == 'G':
-                lineStartOffset = lineNum
-                break
+#     # check for machining process
+#     if currentProcess.process == processMachining:
+#         lineStartOffset = 0
+#         lineEndOffset = -1
+#         # iterates through process lines until first G line found
+#         for lineNum in range(0, nextProcess.lineStart - currentProcess.lineStart):
+#             if lines[currentProcess.lineStart + lineNum][0] == 'G':
+#                 lineStartOffset = lineNum
+#                 break
 
-        # print(nextProcess.lineStart + lineEndOffset - currentProcess.lineStart - lineStartOffset)
-        for lineNum in range(0, math.ceil((nextProcess.lineStart + lineEndOffset - currentProcess.lineStart - lineStartOffset) / 2) ):
-            temp = lines[currentProcess.lineStart + lineStartOffset + lineNum]
-            lines[currentProcess.lineStart + lineStartOffset + lineNum] = lines[nextProcess.lineStart + lineEndOffset - lineNum]
-            lines[nextProcess.lineStart + lineEndOffset - lineNum] = temp
+#         # print(nextProcess.lineStart + lineEndOffset - currentProcess.lineStart - lineStartOffset)
+#         for lineNum in range(0, math.ceil((nextProcess.lineStart + lineEndOffset - currentProcess.lineStart - lineStartOffset) / 2) ):
+#             temp = lines[currentProcess.lineStart + lineStartOffset + lineNum]
+#             lines[currentProcess.lineStart + lineStartOffset + lineNum] = lines[nextProcess.lineStart + lineEndOffset - lineNum]
+#             lines[nextProcess.lineStart + lineEndOffset - lineNum] = temp
 
 # write file
 with open(filename.split('.')[0]+"_hybrid."+filename.split('.')[1], 'w') as outTempFile:
