@@ -27,12 +27,19 @@ processMachining = input("Enter machining process name: ")
 
 # process class 
 class process:
-    def __init__(self, process, lineStart, lineEnd=None):
+    def __init__(self, process, lineStart):
         self.process = process
+        self.lineStart = lineStart
+
+# feature class
+class feature:
+    def __init__(self, feature, lineStart):
+        self.feature = feature
         self.lineStart = lineStart
 
 # file reading
 processes = []
+features = []
 writeSkip = []
 writeInsert = []
 machiningFeedRate = "F288"
@@ -56,10 +63,14 @@ for lineNum, line in enumerate(lines):
         processes.append(process(keywords[2], lineNum))
     elif keywords[0] == ';' and keywords[1] == "layer" and keywords[2] == "end":
         processes.append(process(keywords[2], lineNum))
+    
+    if keywords[0] == ';' and keywords[1] == "feature":
+        features.append(feature(" ".join(keywords[2:]), lineNum))
 
 writeSkip.extend(firstComments)
 
 currentProcess = ""
+currentFeature = ""
 
 for lineNum, line in enumerate(lines):
     keywords = line.split(' ')
@@ -76,16 +87,25 @@ for lineNum, line in enumerate(lines):
         lines[lineNum] = workingLine
         keywords = lines[lineNum].split(' ')
     
-    # iterate through processes to see which process its in and lower feedrate if machining
+    # iterate through processes to see which process its in
     for processNum in range(0, len(processes)):
         if lineNum == processes[processNum].lineStart:
             currentProcess = processes[processNum].process
-            print(currentProcess)
+            # print(currentProcess)
+    
+    # iterate through features to see which feature its in
+    for featureNum in range(0, len(features)):
+        if lineNum == features[featureNum].lineStart:
+            currentFeature = features[featureNum].feature
+            # print(currentFeature)
+
     if currentProcess == processMachining and keywords[0] != ';':
         matches = [keyword for keyword in keywords if re.match("F", keyword)]
         if len(matches) == 1:
             keywords[keywords.index(matches[0])] = machiningFeedRate
             lines[lineNum] = " ".join(keywords)
+    # if currentProcess == processMachining and currentFeature == "skirt":
+    #     writeSkip.append(lineNum)
 
 # reverse machining process lines
 for processNum in range(0, len(processes) - 1):
@@ -109,6 +129,11 @@ for processNum in range(0, len(processes) - 1):
             lines[currentProcess.lineStart + lineStartOffset + lineNum] = lines[nextProcess.lineStart + lineEndOffset - lineNum]
             lines[nextProcess.lineStart + lineEndOffset - lineNum] = temp
 
+            # swap writeSkip line number
+            if currentProcess.lineStart + lineStartOffset + lineNum in writeSkip:
+                print(writeSkip[writeSkip.index(currentProcess.lineStart + lineStartOffset + lineNum)], "replaced with", nextProcess.lineStart + lineEndOffset - lineNum)
+                writeSkip[writeSkip.index(currentProcess.lineStart + lineStartOffset + lineNum)] = nextProcess.lineStart + lineEndOffset - lineNum
+
 # write file
 with open(filename.split('.')[0]+"_hybrid."+filename.split('.')[1], 'w') as outTempFile:
     for lineNum, line in enumerate(lines):
@@ -118,4 +143,5 @@ with open(filename.split('.')[0]+"_hybrid."+filename.split('.')[1], 'w') as outT
     timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     outTempFile.write("; G-Code Hybridized by Masaki Maruo\n; " + timestamp)
 
+print(writeSkip)
 print(ANSI.OKGREEN + "   File " + filename.split('.')[0]+"_hybrid."+filename.split('.')[1] + " written." + ANSI.ENDC)
