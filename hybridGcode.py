@@ -36,18 +36,34 @@ class feature:
     def __init__(self, feature, lineStart):
         self.feature = feature
         self.lineStart = lineStart
+    
+class layer:
+    def __init__(self, layer, lineStart):
+        self.feature = layer
+        self.lineStart = lineStart
 
 # file reading
 processes = []
 features = []
+layers = []
+
+readSkip = []
 writeSkip = []
-writeInsert = []
+writeInsert = {}
 machiningFeedRate = "F288"
+zHopHeight = "Z-50"
 
 firstComments = []
 
 with open(filename, 'r') as inFile:
     lines = [line.strip() for line in inFile]
+
+#prepass remove empty lines
+for lineNum, line in enumerate(lines):
+    if len(line) < 1:
+        readSkip.append(lineNum)
+for index in range(0, len(readSkip)):
+    del lines[readSkip[index] - index]
 
 # first pass indexing
 for lineNum, line in enumerate(lines):
@@ -67,6 +83,10 @@ for lineNum, line in enumerate(lines):
     if keywords[0] == ';' and keywords[1] == "feature":
         features.append(feature(" ".join(keywords[2:]), lineNum))
 
+    elif keywords[0] == ';' and keywords[1] == "layer":
+        layers.append(layer(keywords[2], lineNum))
+        # print(lineNum, lines[lineNum])
+
 writeSkip.extend(firstComments)
 
 currentProcess = ""
@@ -75,7 +95,6 @@ currentFeature = ""
 for lineNum, line in enumerate(lines):
     keywords = line.split(' ')
     
-
     if keywords[0] != ';':
         workingLine = line
 
@@ -104,10 +123,10 @@ for lineNum, line in enumerate(lines):
         if len(matches) == 1:
             keywords[keywords.index(matches[0])] = machiningFeedRate
             lines[lineNum] = " ".join(keywords)
-    # if currentProcess == processMachining and currentFeature == "skirt":
-    #     writeSkip.append(lineNum)
+    if currentProcess == processMachining and currentFeature == "skirt":
+        writeSkip.append(lineNum)
 
-# reverse machining process lines
+# by process modifications
 for processNum in range(0, len(processes) - 1):
 
     currentProcess = processes[processNum]
@@ -115,8 +134,13 @@ for processNum in range(0, len(processes) - 1):
 
     # check for machining process
     if currentProcess.process == processMachining:
+
+        # insert Z rise before each machining process
+        writeInsert[currentProcess.lineStart - 1] = "G1 " + zHopHeight
+
         lineStartOffset = 0
         lineEndOffset = -1
+
         # iterates through process lines until first G line found
         for lineNum in range(0, nextProcess.lineStart - currentProcess.lineStart):
             if lines[currentProcess.lineStart + lineNum][0] == 'G':
@@ -131,17 +155,35 @@ for processNum in range(0, len(processes) - 1):
 
             # swap writeSkip line number
             if currentProcess.lineStart + lineStartOffset + lineNum in writeSkip:
-                print(writeSkip[writeSkip.index(currentProcess.lineStart + lineStartOffset + lineNum)], "replaced with", nextProcess.lineStart + lineEndOffset - lineNum)
                 writeSkip[writeSkip.index(currentProcess.lineStart + lineStartOffset + lineNum)] = nextProcess.lineStart + lineEndOffset - lineNum
 
+        # loop through process and add Z reset
+        currentZ = None
+        maxZ = None
+
+        for lineNum in range(currentProcess.lineStart, nextProcess.lineStart):
+            keywords = lines[lineNum].split(' ')
+            if len(keywords) > 2 and keywords[0] == ';' and keywords[1] == "layer":
+                currentZ = keywords[5]
+            elif currentZ != None and len(keywords) >= 4 and keywords[0] == "G1" and keywords[1][0] == 'X' and keywords[2][0] == 'Y':
+                writeInsert[lineNum] = "G1 Z-" + currentZ
+                currentZ = None
+
+            
+
+
+
+
 # write file
-with open(filename.split('.')[0]+"_hybrid."+filename.split('.')[1], 'w') as outTempFile:
+with open(filename.split('.')[0]+"_hybrid."+filename.split('.')[1], 'w') as outFile:
     for lineNum, line in enumerate(lines):
         if lineNum not in writeSkip:
-            outTempFile.write(line + "\n")
+            outFile.write(line + "\n")
+
+            if lineNum in writeInsert:
+                outFile.write(writeInsert[lineNum] + "\n")
         
     timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    outTempFile.write("; G-Code Hybridized by Masaki Maruo\n; " + timestamp)
+    outFile.write("; G-Code Hybridized by Masaki Maruo\n; " + timestamp)
 
-print(writeSkip)
 print(ANSI.OKGREEN + "   File " + filename.split('.')[0]+"_hybrid."+filename.split('.')[1] + " written." + ANSI.ENDC)
