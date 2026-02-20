@@ -130,7 +130,7 @@ for lineNum, line in enumerate(lines):
             lines[lineNum] = " ".join(keywords)
     if currentProcess == processMachining and currentFeature == "skirt":
         writeSkip.append(lineNum)
-        print("skirt at ", lineNum)
+        # print("skirt at ", lineNum)
 
 # by process modifications
 for processNum in range(0, len(processes) - 1):
@@ -145,7 +145,7 @@ for processNum in range(0, len(processes) - 1):
         writeInsert[currentProcess.lineStart - 1] = "G1 " + zHopHeight
 
         lineStartOffset = 0
-        lineEndOffset = -1
+        lineEndOffset = 0
 
         # iterates through process lines until first G line found
         for lineNum in range(0, nextProcess.lineStart - currentProcess.lineStart):
@@ -153,18 +153,28 @@ for processNum in range(0, len(processes) - 1):
                 lineStartOffset = lineNum
                 break
 
-        # reverses lines using found offset
-        for lineNum in range(0, math.ceil((nextProcess.lineStart + lineEndOffset - currentProcess.lineStart - lineStartOffset) / 2) ):
-            temp = lines[currentProcess.lineStart + lineStartOffset + lineNum]
-            lines[currentProcess.lineStart + lineStartOffset + lineNum] = lines[nextProcess.lineStart + lineEndOffset - lineNum]
-            lines[nextProcess.lineStart + lineEndOffset - lineNum] = temp
+        # reverse lines using found offset
+        # print(nextProcess.lineStart, currentProcess.lineStart)
+        outerPivot = math.ceil((nextProcess.lineStart - currentProcess.lineStart) / 2)
+        innerPivot = math.ceil(( (nextProcess.lineStart + lineEndOffset) - (currentProcess.lineStart + lineStartOffset) ) / 2)
+        print(outerPivot, innerPivot)
+        for lineNum in range(0, outerPivot):
+            if lineNum > lineStartOffset and lineNum < lineStartOffset + innerPivot * 2:
+                print(currentProcess.lineStart + lineNum)
+                # print(lineNum, math.ceil((nextProcess.lineStart - currentProcess.lineStart - lineEndOffset) / 2) + lineNum)
 
-            # swap writeSkip line number
-            # print("at ", currentProcess.lineStart + lineStartOffset + lineNum)
-            if currentProcess.lineStart + lineStartOffset + lineNum in writeSkip:
-                print(lines[nextProcess.lineStart + lineEndOffset - lineNum])
-                # print("wrote", writeSkip[writeSkip.index(currentProcess.lineStart + lineStartOffset + lineNum)], nextProcess.lineStart + lineEndOffset - lineNum)
-                writeSkip[writeSkip.index(currentProcess.lineStart + lineStartOffset + lineNum)] = nextProcess.lineStart + lineEndOffset - lineNum
+        # reverses lines using found offset
+        # for lineNum in range(0, math.ceil((nextProcess.lineStart + lineEndOffset - currentProcess.lineStart - lineStartOffset) / 2) ):
+        #     temp = lines[currentProcess.lineStart + lineStartOffset + lineNum]
+        #     lines[currentProcess.lineStart + lineStartOffset + lineNum] = lines[nextProcess.lineStart + lineEndOffset - lineNum]
+        #     lines[nextProcess.lineStart + lineEndOffset - lineNum] = temp
+
+        #     # swap writeSkip line number
+        #     # print("at ", currentProcess.lineStart + lineStartOffset + lineNum)
+        #     if currentProcess.lineStart + lineStartOffset + lineNum in writeSkip:
+        #         print(lines[nextProcess.lineStart + lineEndOffset - lineNum])
+        #         # print("wrote", writeSkip[writeSkip.index(currentProcess.lineStart + lineStartOffset + lineNum)], nextProcess.lineStart + lineEndOffset - lineNum)
+        #         writeSkip[writeSkip.index(currentProcess.lineStart + lineStartOffset + lineNum)] = nextProcess.lineStart + lineEndOffset - lineNum
         if multipass:
             # loop through process and add Z reset and Z revert
             writingZ = True
@@ -191,10 +201,6 @@ for processNum in range(0, len(processes) - 1):
                     writingZ = False
 
             writeInsert[nextProcess.lineStart - 1] = "G1 Z-" + str(maxZ) + " ; bob"
-
-
-for i in writeSkip:
-    print(i)
 
 # write file
 with open(filename.split('.')[0]+"_hybrid."+filename.split('.')[1], 'w') as outFile:
