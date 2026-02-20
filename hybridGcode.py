@@ -47,6 +47,8 @@ processes = []
 features = []
 layers = []
 
+multipass = False
+
 readSkip = []
 writeSkip = []
 writeInsert = {}
@@ -89,6 +91,9 @@ for lineNum, line in enumerate(lines):
 
 writeSkip.extend(firstComments)
 
+if len(processes) > 3:
+    multipass = True
+
 currentProcess = ""
 currentFeature = ""
 
@@ -125,6 +130,7 @@ for lineNum, line in enumerate(lines):
             lines[lineNum] = " ".join(keywords)
     if currentProcess == processMachining and currentFeature == "skirt":
         writeSkip.append(lineNum)
+        print("skirt at ", lineNum)
 
 # by process modifications
 for processNum in range(0, len(processes) - 1):
@@ -154,25 +160,41 @@ for processNum in range(0, len(processes) - 1):
             lines[nextProcess.lineStart + lineEndOffset - lineNum] = temp
 
             # swap writeSkip line number
+            # print("at ", currentProcess.lineStart + lineStartOffset + lineNum)
             if currentProcess.lineStart + lineStartOffset + lineNum in writeSkip:
+                print(lines[nextProcess.lineStart + lineEndOffset - lineNum])
+                # print("wrote", writeSkip[writeSkip.index(currentProcess.lineStart + lineStartOffset + lineNum)], nextProcess.lineStart + lineEndOffset - lineNum)
                 writeSkip[writeSkip.index(currentProcess.lineStart + lineStartOffset + lineNum)] = nextProcess.lineStart + lineEndOffset - lineNum
+        if multipass:
+            # loop through process and add Z reset and Z revert
+            writingZ = True
+            maxZ = None
+            nextZ = None
 
-        # loop through process and add Z reset
-        currentZ = None
-        maxZ = None
+            for lineNum in range(nextProcess.lineStart, currentProcess.lineStart, -1):
+                keywords = lines[lineNum].split(' ')
+                if len(keywords) > 5 and keywords[0] == ';' and keywords[1] == "layer":
+                    maxZ = nextZ = float(keywords[5])
+                    break
 
-        for lineNum in range(currentProcess.lineStart, nextProcess.lineStart):
-            keywords = lines[lineNum].split(' ')
-            if len(keywords) > 2 and keywords[0] == ';' and keywords[1] == "layer":
-                currentZ = keywords[5]
-            elif currentZ != None and len(keywords) >= 4 and keywords[0] == "G1" and keywords[1][0] == 'X' and keywords[2][0] == 'Y':
-                writeInsert[lineNum] = "G1 Z-" + currentZ
-                currentZ = None
+            for lineNum in range(currentProcess.lineStart + 2, nextProcess.lineStart):
+                keywords = lines[lineNum].split(' ')
 
-            
+                # change nextZ at every layer comment
+                if len(keywords) > 2 and keywords[0] == ';' and keywords[1] == "layer":
+                    nextZ -= 1
+                    writingZ = True
+
+                # check if first x y line in layer
+                if writingZ and isinstance(nextZ, float) and len(keywords) >= 4 and keywords[0] == "G1" and keywords[1][0] == 'X' and keywords[2][0] == 'Y':
+                    writeInsert[lineNum] = "G1 Z-" + str(nextZ)
+                    writingZ = False
+
+            writeInsert[nextProcess.lineStart - 1] = "G1 Z-" + str(maxZ) + " ; bob"
 
 
-
+for i in writeSkip:
+    print(i)
 
 # write file
 with open(filename.split('.')[0]+"_hybrid."+filename.split('.')[1], 'w') as outFile:
