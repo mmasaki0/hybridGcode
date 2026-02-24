@@ -104,7 +104,7 @@ for lineNum, line in enumerate(lines):
         workingLine = line
 
         # replaces E motor with A motor reversed (extruder)
-        workingLine = workingLine.replace(" E", " A-")
+        # workingLine = workingLine.replace(" E", " A-")
         # flips coordinate system upside down (machines counterclockwise by right hand rule)
         workingLine = workingLine.replace(" Z", " Z-").replace("--", "-")
 
@@ -134,6 +134,7 @@ for lineNum, line in enumerate(lines):
 
 # by process modifications
 for processNum in range(0, len(processes) - 1):
+    print("process:", processes[processNum].process)
 
     currentProcess = processes[processNum]
     nextProcess = processes[processNum + 1]
@@ -145,7 +146,7 @@ for processNum in range(0, len(processes) - 1):
         writeInsert[currentProcess.lineStart - 1] = "G1 " + zHopHeight
 
         lineStartOffset = 0
-        lineEndOffset = 0
+        lineEndOffset = -1
 
         # iterates through process lines until first G line found
         for lineNum in range(0, nextProcess.lineStart - currentProcess.lineStart):
@@ -153,54 +154,60 @@ for processNum in range(0, len(processes) - 1):
                 lineStartOffset = lineNum
                 break
 
-        # # reverse lines using found offset
-        # # print(nextProcess.lineStart, currentProcess.lineStart)
-        # outerPivot = math.ceil((nextProcess.lineStart - currentProcess.lineStart) / 2)
-        # innerPivot = math.ceil(( (nextProcess.lineStart + lineEndOffset) - (currentProcess.lineStart + lineStartOffset) ) / 2)
-        # print(outerPivot, innerPivot)
-        # for lineNum in range(0, outerPivot):
-        #     if lineNum > lineStartOffset and lineNum < lineStartOffset + innerPivot * 2:
-        #         print(currentProcess.lineStart + lineNum)
-        #         # print(lineNum, math.ceil((nextProcess.lineStart - currentProcess.lineStart - lineEndOffset) / 2) + lineNum)
-
         # reverses lines using found offset
-        for lineNum in range(0, math.ceil((nextProcess.lineStart + lineEndOffset - currentProcess.lineStart - lineStartOffset) / 2) ):
-            temp = lines[currentProcess.lineStart + lineStartOffset + lineNum]
-            lines[currentProcess.lineStart + lineStartOffset + lineNum] = lines[nextProcess.lineStart + lineEndOffset - lineNum]
-            lines[nextProcess.lineStart + lineEndOffset - lineNum] = temp
+        lineSwapMin = currentProcess.lineStart + lineStartOffset
+        lineSwapMax = nextProcess.lineStart + lineEndOffset
+        print(lineSwapMin, lineSwapMax)
+        print(0, math.ceil((lineSwapMax - lineSwapMin) / 2))
+        for lineNum in range(0, math.ceil((lineSwapMax - lineSwapMin) / 2)):
+            temp = lines[lineSwapMin + lineNum]
+            lines[lineSwapMin + lineNum] = lines[lineSwapMax - lineNum]
+            lines[lineSwapMax - lineNum] = temp
+            print("swapped", lineSwapMin + lineNum, lineSwapMax - lineNum)
+            if lineSwapMin + lineNum in writeSkip:
+                if lineSwapMax - lineNum in writeSkip:
+                    #if both in writeskip, swap
+                    skipTemp = lineSwapMin + lineNum
+                    writeSkip[writeSkip.index(lineSwapMin + lineNum)] = lineSwapMax - lineNum
+                    writeSkip.append(skipTemp)
+                    print("writeskip swapped", lineSwapMin + lineNum,  lineSwapMax - lineNum)
+                else:
+                    #else rewrite only one
+                    writeSkip[writeSkip.index(lineSwapMin + lineNum)] = lineSwapMax - lineNum
+                    print("writeskip replaced", lineSwapMin + lineNum, lineSwapMax - lineNum)
+            
+        # if multipass:
+        #     # loop through process and add Z reset and Z revert
+        #     writingZ = True
+        #     maxZ = None
+        #     nextZ = None
 
-            # swap writeSkip line number
-            # print("at ", currentProcess.lineStart + lineStartOffset + lineNum)
-            if currentProcess.lineStart + lineStartOffset + lineNum in writeSkip:
-                print(lines[nextProcess.lineStart + lineEndOffset - lineNum])
-                # print("wrote", writeSkip[writeSkip.index(currentProcess.lineStart + lineStartOffset + lineNum)], nextProcess.lineStart + lineEndOffset - lineNum)
-                writeSkip[writeSkip.index(currentProcess.lineStart + lineStartOffset + lineNum)] = nextProcess.lineStart + lineEndOffset - lineNum
-        if multipass:
-            # loop through process and add Z reset and Z revert
-            writingZ = True
-            maxZ = None
-            nextZ = None
+        #     for lineNum in range(nextProcess.lineStart, currentProcess.lineStart, -1):
+        #         keywords = lines[lineNum].split(' ')
+        #         if len(keywords) > 5 and keywords[0] == ';' and keywords[1] == "layer":
+        #             maxZ = nextZ = float(keywords[5])
+        #             break
 
-            for lineNum in range(nextProcess.lineStart, currentProcess.lineStart, -1):
-                keywords = lines[lineNum].split(' ')
-                if len(keywords) > 5 and keywords[0] == ';' and keywords[1] == "layer":
-                    maxZ = nextZ = float(keywords[5])
-                    break
+        #     for lineNum in range(currentProcess.lineStart + 2, nextProcess.lineStart):
+        #         keywords = lines[lineNum].split(' ')
 
-            for lineNum in range(currentProcess.lineStart + 2, nextProcess.lineStart):
-                keywords = lines[lineNum].split(' ')
+        #         # change nextZ at every layer comment
+        #         if len(keywords) > 2 and keywords[0] == ';' and keywords[1] == "layer":
+        #             if nextZ == None :
+        #                 nextZ = -50
+        #                 writingZ=True
+        #             else:
+        #                 nextZ -= 1
+        #                 writingZ = True
+                    
+                
 
-                # change nextZ at every layer comment
-                if len(keywords) > 2 and keywords[0] == ';' and keywords[1] == "layer":
-                    nextZ -= 1
-                    writingZ = True
+        #         # check if first x y line in layer
+        #         if writingZ and isinstance(nextZ, float) and len(keywords) >= 4 and keywords[0] == "G1" and keywords[1][0] == 'X' and keywords[2][0] == 'Y':
+        #             writeInsert[lineNum] = "G1 Z-" + str(nextZ)
+        #             writingZ = False
 
-                # check if first x y line in layer
-                if writingZ and isinstance(nextZ, float) and len(keywords) >= 4 and keywords[0] == "G1" and keywords[1][0] == 'X' and keywords[2][0] == 'Y':
-                    writeInsert[lineNum] = "G1 Z-" + str(nextZ)
-                    writingZ = False
-
-            writeInsert[nextProcess.lineStart - 1] = "G1 Z-" + str(maxZ) + " ; bob"
+        #     writeInsert[nextProcess.lineStart - 1] = "G1 Z-" + str(maxZ) + " ; bob"
 
 # write file
 with open(filename.split('.')[0]+"_hybrid."+filename.split('.')[1], 'w') as outFile:
