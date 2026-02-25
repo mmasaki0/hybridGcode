@@ -56,6 +56,8 @@ machiningFeedRate = "F288"
 zHopHeight = "Z-50"
 
 firstComments = []
+firstMCodes = []
+firstHome = []
 
 with open(filename, 'r') as inFile:
     lines = [line.strip() for line in inFile]
@@ -75,7 +77,16 @@ for lineNum, line in enumerate(lines):
     if keywords[0] == ';':
         if lineNum == 0 or len(firstComments) != 0 and lineNum == firstComments[-1] + 1:
             firstComments.append(lineNum)
+
+    # add first M codes to writeSkip
+    if keywords[0][0] == 'M':
+        if len(firstMCodes) == 0 or lineNum == firstMCodes[-1] + 1:
+            firstMCodes.append(lineNum)
     
+    # add first G28 to writeSkip
+    if keywords[0] == 'G28' and len(firstHome) == 0:
+        firstHome.append(lineNum)
+
     # indexes processes
     if keywords[0] == ';' and keywords[1] == "process":
         processes.append(process(keywords[2], lineNum))
@@ -90,6 +101,8 @@ for lineNum, line in enumerate(lines):
         # print(lineNum, lines[lineNum])
 
 writeSkip.extend(firstComments)
+writeSkip.extend(firstMCodes)
+writeSkip.extend(firstHome)
 
 if len(processes) > 3:
     multipass = True
@@ -104,7 +117,7 @@ for lineNum, line in enumerate(lines):
         workingLine = line
 
         # replaces E motor with A motor reversed (extruder)
-        # workingLine = workingLine.replace(" E", " A-")
+        workingLine = workingLine.replace(" E", " A-")
         # flips coordinate system upside down (machines counterclockwise by right hand rule)
         workingLine = workingLine.replace(" Z", " Z-").replace("--", "-")
 
@@ -157,25 +170,31 @@ for processNum in range(0, len(processes) - 1):
         # reverses lines using found offset
         lineSwapMin = currentProcess.lineStart + lineStartOffset
         lineSwapMax = nextProcess.lineStart + lineEndOffset
-        print(lineSwapMin, lineSwapMax)
-        print(0, math.ceil((lineSwapMax - lineSwapMin) / 2))
+        # print(lineSwapMin, lineSwapMax)
+        # print(0, math.ceil((lineSwapMax - lineSwapMin) / 2))
         for lineNum in range(0, math.ceil((lineSwapMax - lineSwapMin) / 2)):
             temp = lines[lineSwapMin + lineNum]
             lines[lineSwapMin + lineNum] = lines[lineSwapMax - lineNum]
             lines[lineSwapMax - lineNum] = temp
-            print("swapped", lineSwapMin + lineNum, lineSwapMax - lineNum)
+            # print("swapped", lineSwapMin + lineNum, lineSwapMax - lineNum)
             if lineSwapMin + lineNum in writeSkip:
                 if lineSwapMax - lineNum in writeSkip:
                     #if both in writeskip, swap
                     skipTemp = lineSwapMin + lineNum
                     writeSkip[writeSkip.index(lineSwapMin + lineNum)] = lineSwapMax - lineNum
                     writeSkip.append(skipTemp)
-                    print("writeskip swapped", lineSwapMin + lineNum,  lineSwapMax - lineNum)
+                    # print("writeskip swapped", lineSwapMin + lineNum,  lineSwapMax - lineNum)
                 else:
                     #else rewrite only one
                     writeSkip[writeSkip.index(lineSwapMin + lineNum)] = lineSwapMax - lineNum
-                    print("writeskip replaced", lineSwapMin + lineNum, lineSwapMax - lineNum)
-            
+                    # print("writeskip replaced", lineSwapMin + lineNum, lineSwapMax - lineNum)
+        
+        # z reset
+
+
+
+
+
         # if multipass:
         #     # loop through process and add Z reset and Z revert
         #     writingZ = True
