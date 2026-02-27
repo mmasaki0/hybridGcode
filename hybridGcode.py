@@ -52,7 +52,7 @@ multipass = False
 readSkip = []
 writeSkip = []
 writeInsert = {}
-machiningFeedRate = "F288"
+machiningFeedRate = "F300"
 zHopHeight = "Z-50"
 
 firstComments = []
