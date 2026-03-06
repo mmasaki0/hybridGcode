@@ -122,7 +122,7 @@ for lineNum, line in enumerate(lines):
         workingLine = line
 
         # replaces E motor with A motor reversed (extruder)
-        # workingLine = workingLine.replace(" E", " A-")
+        workingLine = workingLine.replace(" E", " A-")
         # flips coordinate system upside down (machines counterclockwise by right hand rule)
         workingLine = workingLine.replace(" Z", " Z-").replace("--", "-")
 
