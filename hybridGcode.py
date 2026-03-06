@@ -161,8 +161,8 @@ for processNum in range(0, len(processes) - 1):
     if currentProcess.process == processMachining:
 
         # insert Z rise before each machining process
-        # writeInsert[currentProcess.lineStart - 1] = "G92 A-0\nG1 A" + zHopNozzleRetract + " F2400\n" + "G1 " + zHopHeight + " F1000\n" + "G1 A-" + zHopNozzleRetract + " F2400"
-        writeInsert[currentProcess.lineStart - 1] = "G92 E-0\nG1 E" + zHopNozzleRetract + " F2400\n" + "G1 " + zHopHeight + " F1000\n" + "G1 E-" + zHopNozzleRetract + " F2400"
+        writeInsert[currentProcess.lineStart - 1] = "G92 A-0\nG1 A" + zHopNozzleRetract + " F2400\n" + "G1 " + zHopHeight + " F1000\n" + "G1 A-" + zHopNozzleRetract + " F2400"
+        # writeInsert[currentProcess.lineStart - 1] = "G92 E-0\nG1 E" + zHopNozzleRetract + " F2400\n" + "G1 " + zHopHeight + " F1000\n" + "G1 E-" + zHopNozzleRetract + " F2400"
 
         lineStartOffset = 0
         lineEndOffset = -1
