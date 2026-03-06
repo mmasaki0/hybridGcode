@@ -54,6 +54,7 @@ writeSkip = []
 writeInsert = {}
 machiningFeedRate = "F300"
 zHopHeight = "Z-50"
+zHopNozzleRetract = "4"     # 4mm retraction for z-hopping
 
 firstComments = []
 firstMCodes = []
@@ -156,7 +157,7 @@ for processNum in range(0, len(processes) - 1):
     if currentProcess.process == processMachining:
 
         # insert Z rise before each machining process
-        writeInsert[currentProcess.lineStart - 1] = "G1 " + zHopHeight
+        writeInsert[currentProcess.lineStart - 1] = "G92 A-0\nG1 A" + zHopNozzleRetract + " F2400\n" + "G1 " + zHopHeight + " F1000\n" + "G1 A-" + zHopNozzleRetract + " F2400"
 
         lineStartOffset = 0
         lineEndOffset = -1
@@ -188,12 +189,16 @@ for processNum in range(0, len(processes) - 1):
                     #else rewrite only one
                     writeSkip[writeSkip.index(lineSwapMin + lineNum)] = lineSwapMax - lineNum
                     # print("writeskip replaced", lineSwapMin + lineNum, lineSwapMax - lineNum)
-        
-        # z reset
 
+        # find highest z in process and reset z for each layer
 
+        # for i in layers:
+        #     if i.lineStart > currentProcess.lineStart and i.lineStart < nextProcess.lineStart:
+        #         print(i.lineStart)
 
-
+        for lineNum in range(nextProcess.lineStart, currentProcess.lineStart, -1):
+            
+            print(lines[lineNum])
 
         # if multipass:
         #     # loop through process and add Z reset and Z revert
