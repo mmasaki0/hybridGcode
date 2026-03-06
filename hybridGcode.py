@@ -38,9 +38,10 @@ class feature:
         self.lineStart = lineStart
     
 class layer:
-    def __init__(self, layer, lineStart):
-        self.feature = layer
+    def __init__(self, layer, lineStart, z):
+        self.layer = layer
         self.lineStart = lineStart
+        self.z = z
 
 # file reading
 processes = []
@@ -98,7 +99,10 @@ for lineNum, line in enumerate(lines):
         features.append(feature(" ".join(keywords[2:]), lineNum))
 
     elif keywords[0] == ';' and keywords[1] == "layer":
-        layers.append(layer(keywords[2], lineNum))
+        if keywords[2] != "end":
+            layers.append(layer(keywords[2][:-1], lineNum, keywords[5]))
+        else:
+            layers.append(layer(keywords[2], lineNum, None))
         # print(lineNum, lines[lineNum])
 
 writeSkip.extend(firstComments)
@@ -118,7 +122,7 @@ for lineNum, line in enumerate(lines):
         workingLine = line
 
         # replaces E motor with A motor reversed (extruder)
-        workingLine = workingLine.replace(" E", " A-")
+        # workingLine = workingLine.replace(" E", " A-")
         # flips coordinate system upside down (machines counterclockwise by right hand rule)
         workingLine = workingLine.replace(" Z", " Z-").replace("--", "-")
 
@@ -137,6 +141,7 @@ for lineNum, line in enumerate(lines):
             currentFeature = features[featureNum].feature
             # print(currentFeature)
 
+    # set feedrate for machining
     if currentProcess == processMachining and keywords[0] != ';':
         matches = [keyword for keyword in keywords if re.match("F", keyword)]
         if len(matches) == 1:
@@ -144,11 +149,10 @@ for lineNum, line in enumerate(lines):
             lines[lineNum] = " ".join(keywords)
     if currentProcess == processMachining and currentFeature == "skirt":
         writeSkip.append(lineNum)
-        # print("skirt at ", lineNum)
 
 # by process modifications
 for processNum in range(0, len(processes) - 1):
-    print("process:", processes[processNum].process)
+    # print("process:", processes[processNum].process)
 
     currentProcess = processes[processNum]
     nextProcess = processes[processNum + 1]
@@ -157,7 +161,8 @@ for processNum in range(0, len(processes) - 1):
     if currentProcess.process == processMachining:
 
         # insert Z rise before each machining process
-        writeInsert[currentProcess.lineStart - 1] = "G92 A-0\nG1 A" + zHopNozzleRetract + " F2400\n" + "G1 " + zHopHeight + " F1000\n" + "G1 A-" + zHopNozzleRetract + " F2400"
+        # writeInsert[currentProcess.lineStart - 1] = "G92 A-0\nG1 A" + zHopNozzleRetract + " F2400\n" + "G1 " + zHopHeight + " F1000\n" + "G1 A-" + zHopNozzleRetract + " F2400"
+        writeInsert[currentProcess.lineStart - 1] = "G92 E-0\nG1 E" + zHopNozzleRetract + " F2400\n" + "G1 " + zHopHeight + " F1000\n" + "G1 E-" + zHopNozzleRetract + " F2400"
 
         lineStartOffset = 0
         lineEndOffset = -1
@@ -192,13 +197,41 @@ for processNum in range(0, len(processes) - 1):
 
         # find highest z in process and reset z for each layer
 
-        # for i in layers:
-        #     if i.lineStart > currentProcess.lineStart and i.lineStart < nextProcess.lineStart:
-        #         print(i.lineStart)
 
-        for lineNum in range(nextProcess.lineStart, currentProcess.lineStart, -1):
+        maxZ = None
+        # print(nextProcess.process)
+        for layerNum in range(len(layers)-1, 0, -1):
+            if layers[layerNum].lineStart > currentProcess.lineStart and (nextProcess.process=="end" or layers[layerNum].lineStart < nextProcess.lineStart):
+                maxZ = layers[layerNum].z
+                print(currentProcess.process, maxZ)
+                break
+
+        # loop through layers, see if layer is in current process, add z to list
+        currentProcessZList = []
+        for layerNum in range(len(layers)-1, 0, -1):
+            if (nextProcess.process != "end" and layers[layerNum].lineStart > currentProcess.lineStart and layers[layerNum].lineStart < nextProcess.lineStart) or (nextProcess.process == "end" and layers[layerNum].lineStart > currentProcess.lineStart):
+                if layers[layerNum].z != None:
+                    currentProcessZList.append(layers[layerNum].z)
+        print(currentProcessZList)
+
+        # loop through lines of process
+        writingZ = False
+        writingIndex = -1
+        for lineNum in range(currentProcess.lineStart, nextProcess.lineStart):
+            keywords = lines[lineNum].split(' ')
             
-            print(lines[lineNum])
+            # if new layer found, turn on writing
+            if len(keywords) > 2 and keywords[0] == ';' and keywords[1] == "layer":
+                writingZ = True
+                writingIndex += 1
+            if writingZ and len(keywords) >= 4 and keywords[0] == "G1" and keywords[1][0] == 'X' and keywords[2][0] == 'Y':
+                    writeInsert[lineNum] = "G1 Z-" + currentProcessZList[writingIndex]
+                    writingZ = False
+
+
+        # for lineNum in range(nextProcess.lineStart, currentProcess.lineStart, -1):
+            
+            # print(lines[lineNum])
 
         # if multipass:
         #     # loop through process and add Z reset and Z revert
